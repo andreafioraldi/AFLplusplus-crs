@@ -14,11 +14,15 @@ import subprocess
 from datetime import datetime
 import requests
 
+script_dir = os.path.abspath(os.path.dirname(__file__))
+
 API_TOKEN = open("api_token.txt").read().strip()
 CACHE_DIR = "cache"
 COMP_DIR  = "competitions"
 API_BASE  = "https://rode0day.mit.edu/api/1.0/"
-AFL_PATH = "/home/andrew/git/afl/afl-fuzz" # Change to the location of afl-fuzz on your system
+AFL_PATH = script_dir + "/AFLplusplus/afl-fuzz" # Change to the location of afl-fuzz on your system
+
+LIBCOMPCOV = os.path.dirname(AFL_PATH) + "/libcompcov.so"
 
 if not os.path.isfile(AFL_PATH):
     raise RuntimeError("You must update your AFL_PATH to the the location of afl-fuzz")
@@ -267,7 +271,7 @@ def _start_afl(challenge, extra_args=None):
         args    = challenge["binary_arguments"].format(install_dir=local_dir, input_file="@@") # Input file name @@ is replaced by AFL with the fuzzed filename
 
     bin_command  = "{binary} {args}".format(binary=binary, args=args)
-    fuzz_command = "{afl_path} -Q -m 4098 -i {input_dir} -o {output_dir} {extra} -- {bin_command}".format(afl_path=AFL_PATH, library_dir=library_dir,
+    fuzz_command = "{afl_path} -Q -m 4098 -i {input_dir} -o {output_dir} -d -L 5 {extra} -- {bin_command}".format(afl_path=AFL_PATH, library_dir=library_dir,
                                                                                                     input_dir=input_dir, output_dir=output_dir, bin_command=bin_command,
                                                                                                     extra=extra_args if extra_args else "")
 
@@ -278,13 +282,19 @@ def _start_afl(challenge, extra_args=None):
     if library_dir:
         custom_env["QEMU_SET_ENV"] = "LD_LIBRARY_PATH={}".format(library_dir)
         custom_env["AFL_INST_LIBS"] = "1"
-
+    
+    custom_env["AFL_COMPCOV_LEVEL"] = "2"
 
 # AFL_INST_LIBS=1 QEMU_SET_ENV=LD_LIBRARY_PATH=$(pwd)/lib ~/git/afl/afl-fuzz -m 4192 -Q -i inputs/ -o output_test -- bin/file -m share/misc/magic.mgc @@
 
     my_env = os.environ.copy()
     for k,v in custom_env.items():
         my_env[k] = v
+    
+    if "AFL_PRELOAD" in my_env:
+        my_env["AFL_PRELOAD"] = my_env["AFL_PRELOAD"] + " " + LIBCOMPCOV
+    else:
+        my_env["AFL_PRELOAD"] = LIBCOMPCOV
 
     try:
         subprocess.check_output(shlex.split(fuzz_command), stderr=subprocess.STDOUT, env=my_env)
