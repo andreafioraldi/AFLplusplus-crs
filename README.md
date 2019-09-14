@@ -24,3 +24,4 @@ Based on Andrew Fasano's SimpleCRS.
 * Submit bug-triggering inputs
 * Caching to minimize rate-limited requests
 
+The fuzzer may need `export QEMU_RESERVED_VA=0x1000000`
