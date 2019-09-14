@@ -2,6 +2,7 @@
 
 This Python 3 script that make use of the Rode0day API.
 It will automatically play in Rode0day competitions using AFL++ in qemu-mode with CompareCoverage level 2 enabled.
+The MOpt mutations scheduler is also enabled with pacemaker mode after 5 minutes.
 At the end of each competition, the script will load the next competition and switch to fuzzing those binaries.
 
 Based on Andrew Fasano's SimpleCRS.
